@@ -1,12 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Summit Home Services — Booking</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Summit Home Services — Booking</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0F1418; font-family: 'Barlow', 'Segoe UI', system-ui, sans-serif; }
+    button { cursor: pointer; font-family: inherit; }
+    input, textarea { font-family: inherit; }
+    input:focus, textarea:focus, button:focus-visible { outline: 2px solid #FF7A1A; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react">
+
+    const { useState } = React;
+    const T = { bg:"#0F1418", panel:"#1A2128", panelLight:"#232C35", line:"#2E3A45", text:"#E8EDF1", dim:"#8CA0B0", accent:"#FF7A1A", good:"#3DD68C" };
+    const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat"];
+    const SLOTS = ["8:00 AM","9:30 AM","11:00 AM","1:00 PM","2:30 PM","4:00 PM"];
+    const defaultAvail = {};
+    DAYS.forEach((d)=>SLOTS.forEach((s)=>{ defaultAvail[d+"|"+s] = !(d==="Sat" && (s==="2:30 PM"||s==="4:00 PM")); }));
+    function Field({label,value,onChange,span2,area}){
+      const base={width:"100%",background:T.panelLight,border:"1px solid "+T.line,borderRadius:6,color:T.text,padding:"10px 12px",fontSize:14};
+      return (<label style={{gridColumn:span2?"1 / -1":"auto",display:"block"}}>
+        <div style={{fontSize:12,color:T.dim,marginBottom:5,fontWeight:500,textTransform:"uppercase",letterSpacing:"0.5px"}}>{label}</div>
+        {area?(<textarea rows={3} value={value} onChange={(e)=>onChange(e.target.value)} style={{...base,resize:"vertical"}}/>):(<input value={value} onChange={(e)=>onChange(e.target.value)} style={base}/>)}
+      </label>);
+    }
+    function Grid({children}){ return (<div style={{overflowX:"auto",marginBottom:28}}><div style={{display:"grid",gridTemplateColumns:"repeat(6, minmax(96px, 1fr))",gap:8,minWidth:620}}>{children}</div></div>); }
+    function DayHeaders(){ return DAYS.map((d)=>(<div key={d} style={{textAlign:"center",fontFamily:"'Barlow Condensed', sans-serif",fontWeight:600,fontSize:16,color:T.dim,textTransform:"uppercase",letterSpacing:"1px",paddingBottom:4}}>{d}</div>)); }
+    function CustomerView({slotState,selected,setSelected,form,setForm,submit,confirmed}){
+      return (<div>
+        <h1 style={{fontFamily:"'Barlow Condensed', sans-serif",fontWeight:700,fontSize:34,margin:"0 0 4px",textTransform:"uppercase",letterSpacing:"0.5px",color:T.text}}>Pick a time</h1>
+        <p style={{color:T.dim,margin:"0 0 24px",fontSize:15}}>Choose an open slot this week. Estimates take about 45 minutes.</p>
+        {confirmed && (<div style={{background:"rgba(61,214,140,0.08)",border:"1px solid "+T.good,borderRadius:8,padding:"14px 18px",marginBottom:24}}>
+          <div style={{fontWeight:600,color:T.good}}>Booking confirmed</div>
+          <div style={{fontSize:14,color:T.text,marginTop:4}}>{confirmed.name} — {confirmed.day} at {confirmed.time}. We'll call {confirmed.phone} to confirm.</div>
+        </div>)}
+        <Grid><DayHeaders/>{SLOTS.map((s)=>DAYS.map((d)=>{
+          const key=d+"|"+s; const st=slotState(key); const isSel=selected===key;
+          return (<button key={key} disabled={st!=="open"} onClick={()=>setSelected(isSel?null:key)} style={{padding:"10px 4px",borderRadius:6,fontSize:13,fontWeight:500,border:"1px solid "+(isSel?T.accent:st==="open"?T.line:"transparent"),background:isSel?T.accent:st==="open"?T.panel:st==="booked"?"rgba(255,122,26,0.06)":"transparent",color:isSel?"#14100B":st==="open"?T.text:T.dim,opacity:st==="closed"?0.35:1,cursor:st==="open"?"pointer":"default"}}>{st==="booked"?"Booked":s}</button>);
+        }))}</Grid>
+        {selected && (<div style={{background:T.panel,border:"1px solid "+T.line,borderRadius:10,padding:22}}>
+          <div style={{fontFamily:"'Barlow Condensed', sans-serif",fontWeight:600,fontSize:20,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:16,color:T.text}}>{selected.replace("|"," · ")} <span style={{color:T.accent}}>— your info</span></div>
+          <div style={{display:"grid",gap:12,gridTemplateColumns:"1fr 1fr"}}>
+            <Field label="Name *" value={form.name} onChange={(v)=>setForm({...form,name:v})}/>
+            <Field label="Phone *" value={form.phone} onChange={(v)=>setForm({...form,phone:v})}/>
+            <Field label="Email" value={form.email} onChange={(v)=>setForm({...form,email:v})} span2/>
+            <Field label="What do you need done?" value={form.notes} onChange={(v)=>setForm({...form,notes:v})} span2 area/>
+          </div>
+          <button onClick={submit} disabled={!form.name.trim()||!form.phone.trim()} style={{marginTop:16,padding:"12px 28px",borderRadius:6,border:"none",background:form.name.trim()&&form.phone.trim()?T.accent:T.panelLight,color:form.name.trim()&&form.phone.trim()?"#14100B":T.dim,fontWeight:700,fontSize:15,textTransform:"uppercase",letterSpacing:"0.5px"}}>Book this slot</button>
+        </div>)}
+      </div>);
+    }
+    function OwnerView({avail,toggleAvail,bookings,cancelBooking,bookedKeys}){
+      return (<div>
+        <h1 style={{fontFamily:"'Barlow Condensed', sans-serif",fontWeight:700,fontSize:34,margin:"0 0 4px",textTransform:"uppercase",letterSpacing:"0.5px",color:T.text}}>Owner dashboard</h1>
+        <p style={{color:T.dim,margin:"0 0 24px",fontSize:15}}>Tap a slot to open or close it. Booked slots are locked until cancelled.</p>
+        <Grid><DayHeaders/>{SLOTS.map((s)=>DAYS.map((d)=>{
+          const key=d+"|"+s; const booked=bookedKeys.has(key); const open=avail[key];
+          return (<button key={key} disabled={booked} onClick={()=>toggleAvail(key)} style={{padding:"10px 4px",borderRadius:6,fontSize:13,fontWeight:500,border:"1px solid "+(booked?T.accent:open?T.good:T.line),background:booked?"rgba(255,122,26,0.12)":open?"rgba(61,214,140,0.07)":T.panel,color:booked?T.accent:open?T.good:T.dim,opacity:!open&&!booked?0.5:1}}>{booked?"Booked":open?s:"Closed"}</button>);
+        }))}</Grid>
+        <h2 style={{fontFamily:"'Barlow Condensed', sans-serif",fontWeight:600,fontSize:22,textTransform:"uppercase",letterSpacing:"0.5px",margin:"0 0 12px",color:T.text}}>Upcoming bookings <span style={{color:T.accent}}>({bookings.length})</span></h2>
+        {bookings.length===0?(<div style={{color:T.dim,fontSize:14,background:T.panel,border:"1px dashed "+T.line,borderRadius:8,padding:"18px 20px"}}>No bookings yet. Share your booking link to start filling the week.</div>):(<div style={{display:"grid",gap:10}}>{bookings.map((b)=>(<div key={b.id} style={{background:T.panel,border:"1px solid "+T.line,borderRadius:8,padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}><div><div style={{fontWeight:600,color:T.text}}>{b.name} <span style={{color:T.accent,fontWeight:500}}>· {b.day} {b.time}</span></div><div style={{color:T.dim,fontSize:13,marginTop:2}}>{b.phone}{b.email?" · "+b.email:""}{b.notes?" · ""+b.notes+""":""}</div></div><button onClick={()=>cancelBooking(b.id)} style={{padding:"6px 14px",borderRadius:6,border:"1px solid "+T.line,background:"transparent",color:T.dim,fontSize:13,fontWeight:500}}>Cancel</button></div>))}</div>)}
+      </div>);
+    }
+    function BookingApp(){
+      const [view,setView]=useState("customer");
+      const [avail,setAvail]=useState(defaultAvail);
+      const [bookings,setBookings]=useState([]);
+      const [selected,setSelected]=useState(null);
+      const [form,setForm]=useState({name:"",phone:"",email:"",notes:""});
+      const [confirmed,setConfirmed]=useState(null);
+      const bookedKeys=new Set(bookings.map((b)=>b.key));
+      const toggleAvail=(key)=>setAvail({...avail,[key]:!avail[key]});
+      const submit=()=>{ if(!selected||!form.name.trim()||!form.phone.trim())return; const [day,time]=selected.split("|"); const booking={key:selected,day,time,...form,id:Date.now()}; setBookings([...bookings,booking]); setConfirmed(booking); setSelected(null); setForm({name:"",phone:"",email:"",notes:""}); };
+      const cancelBooking=(id)=>setBookings(bookings.filter((b)=>b.id!==id));
+      const slotState=(key)=>{ if(bookedKeys.has(key))return "booked"; if(!avail[key])return "closed"; return "open"; };
+      return (<div style={{minHeight:"100vh",background:T.bg,color:T.text}}>
+        <header style={{borderBottom:"1px solid "+T.line,padding:"20px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+          <div><div style={{fontFamily:"'Barlow Condensed', sans-serif",fontWeight:700,fontSize:26,letterSpacing:"0.5px",textTransform:"uppercase",color:T.text}}><span style={{color:T.accent}}>■</span> Summit Home Services</div><div style={{color:T.dim,fontSize:13,marginTop:2}}>Book an on-site estimate · Jackson, MI</div></div>
+          <div style={{display:"flex",gap:8}}>{["customer","owner"].map((v)=>(<button key={v} onClick={()=>{setView(v);setConfirmed(null);}} style={{padding:"8px 16px",borderRadius:6,border:"1px solid "+(view===v?T.accent:T.line),background:view===v?T.accent:"transparent",color:view===v?"#14100B":T.dim,fontWeight:600,fontSize:13,textTransform:"capitalize"}}>{v==="customer"?"Book a visit":"Owner dashboard"}</button>))}</div>
+        </header>
+        <main style={{maxWidth:860,margin:"0 auto",padding:"28px 20px 64px"}}>{view==="customer"?(<CustomerView slotState={slotState} selected={selected} setSelected={(k)=>{setSelected(k);setConfirmed(null);}} form={form} setForm={setForm} submit={submit} confirmed={confirmed}/>):(<OwnerView avail={avail} toggleAvail={toggleAvail} bookings={bookings} cancelBooking={cancelBooking} bookedKeys={bookedKeys}/>)}</main>
+      </div>);
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<BookingApp />);
+  
+  </script>
+</body>
 </html>
